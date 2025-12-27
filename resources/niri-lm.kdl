@@ -1,0 +1,13 @@
+hotkey-overlay {
+	skip-at-startup
+}
+
+input {
+    mod-key "Alt"
+    mod-key-nested "Alt"
+}
+
+binds {
+    Mod+Shift+E { quit; }
+    Mod+T { spawn "alacritty"; }
+}

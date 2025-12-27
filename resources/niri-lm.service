@@ -1,0 +1,16 @@
+[Unit]
+Description=Niri Login Manager
+After=systemd-user-sessions.service plymouth-quit-wait.service
+After=getty@tty3.service
+Conflicts=getty@tty3.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/niri-lm
+IgnoreSIGPIPE=no
+SendSIGHUP=yes
+KeyringMode=shared
+# Restart=always
+
+[Install]
+Alias=display-manager.service

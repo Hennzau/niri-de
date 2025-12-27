@@ -1,0 +1,17 @@
+[package]
+name = "authkit"
+description = "Rust minimal bindings for Linux-PAM."
+license = "MIT"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+readme.workspace = true
+
+[dependencies]
+bitflags = "2.9.0"
+libc = { version = "0.2" }
+nix = { version = "0.30.1", features = ["fs", "ioctl", "process"] }
