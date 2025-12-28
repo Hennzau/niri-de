@@ -14,5 +14,8 @@ daemon-reload:
 start: build install-niri-lm daemon-reload
     sudo systemctl start niri-lm
 
+local:
+    /usr/bin/niri -c ./resources/niri.kdl -- alacritty
+
 useradd:
     sudo useradd -M -G video niri-lm
