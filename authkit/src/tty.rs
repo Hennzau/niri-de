@@ -1,15 +1,12 @@
-use std::{
-    ffi::CStr,
-    os::fd::{AsRawFd, IntoRawFd, OwnedFd},
-};
+use std::os::fd::{AsRawFd, IntoRawFd, OwnedFd};
 
 use nix::errno::Errno;
 
 pub type TTY = OwnedFd;
 
-pub fn open(tty: &CStr) -> Result<TTY, Errno> {
+pub fn open(vt: u16) -> Result<TTY, Errno> {
     let fd = nix::fcntl::open(
-        tty,
+        format!("/dev/tty{}", vt).as_str(),
         nix::fcntl::OFlag::O_RDWR | nix::fcntl::OFlag::O_NOCTTY,
         nix::sys::stat::Mode::from_bits_truncate(0o666),
     )?;

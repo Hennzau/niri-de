@@ -9,10 +9,10 @@ use macros::*;
 mod macros;
 
 pub fn greeter() {
-    login!("greeter");
+    login!("niri-lm");
     logger!("greeter");
 
-    let niri = CString::new("/usr/local/bin/niri").unwrap();
+    let niri = CString::new("/usr/bin/niri").unwrap();
     let c = CString::new("-c").unwrap();
     let arg = CString::new("/usr/local/share/niri-de/niri-lm.kdl").unwrap();
     exec!(&niri, &[&niri, &c, &arg])
@@ -37,30 +37,29 @@ pub fn main() {
         Ok(txn)
     }
 
-    if let Ok(mut txn) = authenticate("greetd-greeter", "greeter", "") {
+    if let Ok(mut txn) = authenticate("niri-lm", "niri-lm", "") {
         log!("Logged IN {:?}", txn.username(None),);
 
         txn.items_mut()
             .set_tty_name(Some(&OsStr::new("tty4")))
             .expect("Coudln't set PAM to tty4");
 
-        txn.environ_mut().insert("XDG_VTNR", "4");
-        txn.environ_mut().insert("XDG_SEAT", "seat0");
-        txn.environ_mut().insert("XDG_SESSION_CLASS", "greeter");
-        txn.environ_mut().insert("USER", "greeter");
-        txn.environ_mut().insert("LOGNAME", "greeter");
-        txn.environ_mut().insert("HOME", "/home/greeter");
-        txn.environ_mut().insert("SHELL", "/bin/bash");
-        txn.environ_mut().insert("TERM", "linux");
+        txn.env_mut().insert("XDG_VTNR", "4");
+        txn.env_mut().insert("XDG_SEAT", "seat0");
+        txn.env_mut().insert("XDG_SESSION_CLASS", "greeter");
+        txn.env_mut().insert("USER", "niri-lm");
+        txn.env_mut().insert("LOGNAME", "niri-lm");
+        txn.env_mut().insert("HOME", "");
+        txn.env_mut().insert("SHELL", "/bin/bash");
+        txn.env_mut().insert("TERM", "linux");
 
         txn.open_session(BaseFlags::empty())
             .expect("Couldn't open a session");
 
         txn.setcred(CredAction::Establish).expect("Can't set cred");
 
-        let terminal = CString::new("/dev/tty4").unwrap();
         log!("Opening terminal",);
-        let fd = authkit::tty::open(&terminal).expect("Couldn't open terminal");
+        let fd = authkit::tty::open(4).expect("Couldn't open terminal");
         let current = authkit::tty::current(&fd);
         if current != 4 {
             log!("Switching VT",);
@@ -71,7 +70,7 @@ pub fn main() {
         authkit::tty::take(&fd);
 
         let env = txn
-            .environ()
+            .env()
             .iter()
             .map(|(key, val)| {
                 CString::new(format!(

@@ -19,7 +19,7 @@ fn main() {
         txn.setcred(CredAction::Establish)
             .expect("Couldn't establish credentials");
 
-        for (key, val) in txn.environ().iter() {
+        for (key, val) in txn.env().iter() {
             println!("\t{}={}", key.to_str().unwrap(), val.to_str().unwrap());
         }
 

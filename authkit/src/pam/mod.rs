@@ -1,7 +1,7 @@
 mod aliases;
 mod constants;
 mod conversation;
-mod environ;
+mod env;
 mod ffi;
 mod handle;
 mod helper;
@@ -13,7 +13,7 @@ pub use {
     constants::{
         AuthnFlags, AuthtokAction, AuthtokFlags, BaseFlags, CredAction, ErrorCode, Result,
     },
-    environ::{PamEnv, PamEnvMut},
+    env::{PamEnv, PamEnvMut},
     handle::Pam,
     items::{PamItems, PamItemsMut},
 };

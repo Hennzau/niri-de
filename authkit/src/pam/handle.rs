@@ -1,7 +1,7 @@
 use crate::pam::constants;
 use crate::pam::constants::{ErrorCode, RawFlags, Result, ReturnCode};
 use crate::pam::conversation::{PamConversation, PamOwnedConversation};
-use crate::pam::environ::{PamEnv, PamEnvMut};
+use crate::pam::env::{PamEnv, PamEnvMut};
 use crate::pam::items::{PamItems, PamItemsMut};
 use crate::pam::{self, BaseFlags, CredAction};
 use crate::pam::{AuthnFlags, AuthtokFlags};
@@ -158,11 +158,11 @@ impl Pam {
         })
     }
 
-    pub fn environ(&self) -> PamEnv<'_> {
+    pub fn env(&self) -> PamEnv<'_> {
         PamEnv::new(unsafe { &*self.handle })
     }
 
-    pub fn environ_mut(&mut self) -> PamEnvMut<'_> {
+    pub fn env_mut(&mut self) -> PamEnvMut<'_> {
         PamEnvMut::new(unsafe { &mut *self.handle })
     }
 
