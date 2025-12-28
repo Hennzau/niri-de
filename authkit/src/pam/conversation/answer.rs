@@ -1,6 +1,5 @@
-use crate::conversation::OwnedExchange;
-use crate::pam;
-use crate::{ErrorCode, Result};
+use crate::pam::conversation::OwnedExchange;
+use crate::pam::{self, Result};
 
 use core::mem::ManuallyDrop;
 use core::ptr::NonNull;
@@ -18,7 +17,7 @@ pub struct Answers {
 impl Answers {
     pub fn build(value: Vec<OwnedExchange>) -> Result<Self> {
         let mut outputs = Self {
-            base: crate::helper::calloc(value.len()),
+            base: crate::pam::helper::calloc(value.len()),
             count: value.len(),
         };
 
@@ -31,11 +30,6 @@ impl Answers {
                 }
                 OwnedExchange::Info(p) => {
                     TextAnswer::fill(output, p.answer().map(|_| "".as_ref())?)?
-                }
-
-                OwnedExchange::RadioPrompt(p) => TextAnswer::fill(output, &(p.answer()?))?,
-                OwnedExchange::BinaryPrompt(p) => {
-                    BinaryAnswer::fill(output, (&p.answer()?).into())?
                 }
             }
         }
@@ -57,7 +51,7 @@ impl Drop for Answers {
             for answer in self.as_mut_slice().iter_mut() {
                 ptr::drop_in_place(answer)
             }
-            crate::helper::free(self.base.as_ptr())
+            crate::pam::helper::free(self.base.as_ptr())
         }
     }
 }
@@ -65,10 +59,10 @@ impl Drop for Answers {
 #[repr(C)]
 #[derive(Debug, Default)]
 struct Answer {
-    pub data: Option<crate::helper::CHeapBox<c_void>>,
+    pub data: Option<crate::pam::helper::CHeapBox<c_void>>,
 
     return_code: c_int,
-    _marker: crate::helper::Immovable,
+    _marker: crate::pam::helper::Immovable,
 }
 
 #[repr(transparent)]
@@ -77,25 +71,10 @@ struct TextAnswer(Answer);
 
 impl TextAnswer {
     fn fill(dest: &mut Answer, text: &OsStr) -> Result<()> {
-        let allocated = crate::helper::CHeapString::new(text.as_bytes());
+        let allocated = crate::pam::helper::CHeapString::new(text.as_bytes());
         let _ = dest
             .data
-            .replace(unsafe { crate::helper::CHeapBox::cast(allocated.into_box()) });
-        Ok(())
-    }
-}
-
-#[repr(transparent)]
-#[derive(Debug)]
-struct BinaryAnswer(Answer);
-
-impl BinaryAnswer {
-    fn fill(dest: &mut Answer, (data, type_): (&[u8], u8)) -> Result<()> {
-        let payload =
-            crate::helper::CHeapPayload::new(data, type_).map_err(|_| ErrorCode::BufferError)?;
-        let _ = dest
-            .data
-            .replace(unsafe { crate::helper::CHeapBox::cast(payload.into_inner()) });
+            .replace(unsafe { crate::pam::helper::CHeapBox::cast(allocated.into_box()) });
         Ok(())
     }
 }

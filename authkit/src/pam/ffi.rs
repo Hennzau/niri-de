@@ -5,7 +5,7 @@ use core::fmt;
 use core::marker::{PhantomData, PhantomPinned};
 
 #[repr(C)]
-pub struct pam_handle {
+pub(crate) struct pam_handle {
     _value: (),
     _marker: PhantomData<(PhantomPinned, *mut c_void)>,
 }

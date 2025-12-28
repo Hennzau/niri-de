@@ -16,13 +16,13 @@ pub struct PamEnvMut<'a> {
 }
 
 impl<'a> PamEnv<'a> {
-    pub fn new(source: &'a pam_handle) -> Self {
+    pub(crate) fn new(source: &'a pam_handle) -> Self {
         Self { source }
     }
 }
 
 impl<'a> PamEnvMut<'a> {
-    pub fn new(source: &'a mut pam_handle) -> Self {
+    pub(crate) fn new(source: &'a mut pam_handle) -> Self {
         Self { source }
     }
 }
@@ -63,8 +63,9 @@ struct EnvList<'a> {
 
 impl EnvList<'_> {
     fn empty() -> Self {
-        let none: crate::helper::CHeapBox<Option<EnvVar>> = crate::helper::CHeapBox::new(None);
-        let ptr = crate::helper::CHeapBox::into_ptr(none);
+        let none: crate::pam::helper::CHeapBox<Option<EnvVar>> =
+            crate::pam::helper::CHeapBox::new(None);
+        let ptr = crate::pam::helper::CHeapBox::into_ptr(none);
         Self {
             start: ptr,
             current: ptr,
@@ -106,7 +107,7 @@ impl Drop for EnvList<'_> {
                 self.current = advance(self.current);
                 ptr::drop_in_place(var_ref as *mut EnvVar);
             }
-            crate::helper::free(self.start.as_ptr())
+            crate::pam::helper::free(self.start.as_ptr())
         }
     }
 }
@@ -115,7 +116,7 @@ unsafe fn advance<T>(nn: NonNull<T>) -> NonNull<T> {
     unsafe { NonNull::new_unchecked(nn.as_ptr().offset(1)) }
 }
 
-struct EnvVar(crate::helper::CHeapString);
+struct EnvVar(crate::pam::helper::CHeapString);
 
 impl EnvVar {
     fn as_kv(&self) -> (OsString, OsString) {

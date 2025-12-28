@@ -8,7 +8,7 @@ use core::ptr;
 
 use std::ffi::{OsStr, OsString, c_int};
 
-crate::helper::num_enum! {
+crate::pam::helper::num_enum! {
     #[non_exhaustive]
     pub enum ItemType {
         Service = constants::PAM_SERVICE,
@@ -23,8 +23,8 @@ crate::helper::num_enum! {
     }
 }
 
-pub struct PamItems<'a>(pub &'a pam_handle);
-pub struct PamItemsMut<'a>(pub &'a mut pam_handle);
+pub struct PamItems<'a>(pub(crate) &'a pam_handle);
+pub struct PamItemsMut<'a>(pub(crate) &'a mut pam_handle);
 
 macro_rules! cstr_item {
     (get = $getter:ident, item = $item_type:path) => {
@@ -73,7 +73,7 @@ pub unsafe fn get_cstr_item(hdl: &pam_handle, item_type: ItemType) -> Result<Opt
         let mut output = ptr::null();
         let ret = pam::pam_get_item(hdl, item_type as c_int, &mut output);
         ErrorCode::result_from(ret)?;
-        Ok(crate::helper::copy_pam_string(output.cast()))
+        Ok(crate::pam::helper::copy_pam_string(output.cast()))
     }
 }
 
@@ -82,12 +82,12 @@ pub unsafe fn set_cstr_item(
     item_type: ItemType,
     data: Option<&OsStr>,
 ) -> Result<()> {
-    let data_str = crate::helper::option_cstr_os(data);
+    let data_str = crate::pam::helper::option_cstr_os(data);
     let ret = unsafe {
         pam::pam_set_item(
             hdl,
             item_type as c_int,
-            crate::helper::prompt_ptr(data_str.as_deref()).cast(),
+            crate::pam::helper::prompt_ptr(data_str.as_deref()).cast(),
         )
     };
     ErrorCode::result_from(ret)

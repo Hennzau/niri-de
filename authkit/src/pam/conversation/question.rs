@@ -1,20 +1,20 @@
-use crate::ErrorCode;
-use crate::Result;
-use crate::conversation::OwnedExchange;
-use crate::conversation::{ErrorMsg, Exchange, InfoMsg, MaskedQAndA, QAndA};
-use crate::pam;
+use crate::pam::ErrorCode;
+use crate::pam::Result;
+use crate::pam::constants;
+use crate::pam::conversation::ErrorMsg;
+use crate::pam::conversation::{Exchange, InfoMsg, MaskedQAndA, OwnedExchange, QAndA};
 
 use core::ptr::NonNull;
 
 use std::ffi::{CStr, OsStr, c_int, c_void};
 use std::os::unix::ffi::OsStrExt;
 
-crate::helper::num_enum! {
+crate::pam::helper::num_enum! {
     enum Style {
-        PromptEchoOff = pam::PAM_PROMPT_ECHO_OFF,
-        PromptEchoOn = pam::PAM_PROMPT_ECHO_ON,
-        ErrorMsg = pam::PAM_ERROR_MSG,
-        TextInfo = pam::PAM_TEXT_INFO,
+        PromptEchoOff = constants::PAM_PROMPT_ECHO_OFF,
+        PromptEchoOn = constants::PAM_PROMPT_ECHO_ON,
+        ErrorMsg = constants::PAM_ERROR_MSG,
+        TextInfo = constants::PAM_TEXT_INFO,
     }
 }
 
@@ -43,24 +43,21 @@ impl TryFrom<&Exchange<'_>> for Question {
     fn try_from(msg: &Exchange) -> Result<Self> {
         let alloc = |style, text: &OsStr| -> Result<_> {
             Ok((style, unsafe {
-                crate::helper::CHeapBox::cast(
-                    crate::helper::CHeapString::new(text.as_bytes()).into_box(),
+                crate::pam::helper::CHeapBox::cast(
+                    crate::pam::helper::CHeapString::new(text.as_bytes()).into_box(),
                 )
             }))
         };
 
-        let (style, data): (_, crate::helper::CHeapBox<c_void>) = match *msg {
+        let (style, data): (_, crate::pam::helper::CHeapBox<c_void>) = match *msg {
             Exchange::MaskedPrompt(p) => alloc(Style::PromptEchoOff, p.question()),
             Exchange::Prompt(p) => alloc(Style::PromptEchoOn, p.question()),
             Exchange::Error(p) => alloc(Style::ErrorMsg, p.question()),
             Exchange::Info(p) => alloc(Style::TextInfo, p.question()),
-            Exchange::RadioPrompt(_) | Exchange::BinaryPrompt(_) => {
-                Err(ErrorCode::ConversationError)
-            }
         }?;
         Ok(Self {
             style: style.into(),
-            data: Some(crate::helper::CHeapBox::into_ptr(data)),
+            data: Some(crate::pam::helper::CHeapBox::into_ptr(data)),
         })
     }
 }
@@ -76,10 +73,10 @@ impl Drop for Question {
                     | Style::PromptEchoOn => self
                         .data
                         .as_mut()
-                        .map(|p| crate::helper::CHeapString::zero(p.cast())),
+                        .map(|p| crate::pam::helper::CHeapString::zero(p.cast())),
                 };
             };
-            let _ = self.data.map(|p| crate::helper::CHeapBox::from_ptr(p));
+            let _ = self.data.map(|p| crate::pam::helper::CHeapBox::from_ptr(p));
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::{
     ffi::CStr,
-    os::fd::{AsRawFd, FromRawFd, OwnedFd},
+    os::fd::{AsRawFd, IntoRawFd, OwnedFd},
 };
 
 use nix::errno::Errno;
@@ -17,10 +17,16 @@ pub fn open(tty: &CStr) -> Result<TTY, Errno> {
     Ok(fd)
 }
 
+pub fn close(tty: TTY) {
+    unsafe {
+        libc::close(tty.into_raw_fd());
+    }
+}
+
 pub fn current(fd: &TTY) -> u16 {
     #[allow(dead_code, non_camel_case_types)]
     #[repr(C)]
-    pub struct vt_state {
+    struct vt_state {
         pub v_active: u16,
         pub v_signal: u16,
         pub v_state: u16,
@@ -45,7 +51,7 @@ pub fn current(fd: &TTY) -> u16 {
 pub fn switch(fd: &TTY, vt: u16) {
     #[allow(dead_code, non_camel_case_types)]
     #[repr(C)]
-    pub struct vt_mode {
+    struct vt_mode {
         pub mode: u8,
         pub waitv: u8,
         pub relsig: u16,
@@ -55,7 +61,7 @@ pub fn switch(fd: &TTY, vt: u16) {
 
     #[allow(dead_code, non_camel_case_types)]
     #[repr(C)]
-    pub struct vt_setactivate {
+    struct vt_setactivate {
         pub console: u64,
         pub mode: vt_mode,
     }

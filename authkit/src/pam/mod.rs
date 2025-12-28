@@ -1,7 +1,19 @@
-pub(crate) mod aliases;
-pub(crate) mod constants;
-
+mod aliases;
+mod constants;
+mod conversation;
+mod environ;
 mod ffi;
+mod handle;
+mod helper;
+mod items;
 
-pub(crate) use constants::*;
-pub(crate) use ffi::*;
+use ffi::*;
+
+pub use {
+    constants::{
+        AuthnFlags, AuthtokAction, AuthtokFlags, BaseFlags, CredAction, ErrorCode, Result,
+    },
+    environ::{PamEnv, PamEnvMut},
+    handle::Pam,
+    items::{PamItems, PamItemsMut},
+};

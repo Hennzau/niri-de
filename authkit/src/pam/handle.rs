@@ -1,9 +1,10 @@
-use crate::conversation::OwnedConversation;
-use crate::environ::{PamEnv, PamEnvMut};
-use crate::items::{PamItems, PamItemsMut};
+use crate::pam::constants;
 use crate::pam::constants::{ErrorCode, RawFlags, Result, ReturnCode};
-use crate::{AuthnFlags, AuthtokFlags, conversation::Conversation};
-use crate::{BaseFlags, CredAction, pam};
+use crate::pam::conversation::{PamConversation, PamOwnedConversation};
+use crate::pam::environ::{PamEnv, PamEnvMut};
+use crate::pam::items::{PamItems, PamItemsMut};
+use crate::pam::{self, BaseFlags, CredAction};
+use crate::pam::{AuthnFlags, AuthtokFlags};
 
 use core::cell::Cell;
 use core::ptr::NonNull;
@@ -12,13 +13,13 @@ use core::{any, fmt, ptr};
 use std::ffi::{CString, OsStr, OsString, c_char, c_int};
 use std::os::unix::ffi::OsStrExt;
 
-pub struct Pam<C: Conversation> {
+pub struct Pam {
     handle: *mut pam::pam_handle,
     last_return: Cell<Result<()>>,
-    conversation: Box<OwnedConversation<C>>,
+    conversation: Box<PamOwnedConversation>,
 }
 
-impl<C: Conversation> fmt::Debug for Pam<C> {
+impl fmt::Debug for Pam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct(any::type_name::<Self>())
             .field("handle", &format!("{:p}", self.handle))
@@ -28,39 +29,18 @@ impl<C: Conversation> fmt::Debug for Pam<C> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct PamBuilder {
-    service_name: OsString,
-    username: Option<OsString>,
-}
-
-impl PamBuilder {
-    pub fn new(service_name: impl AsRef<OsStr>) -> Self {
-        Self {
-            service_name: service_name.as_ref().into(),
-            username: None,
-        }
-    }
-
-    pub fn username(mut self, username: impl AsRef<OsStr>) -> Self {
-        self.username = Some(username.as_ref().into());
-        self
-    }
-
-    pub fn build<C: Conversation>(self, conv: C) -> Result<Pam<C>> {
-        Pam::start(self.service_name, self.username, conv)
-    }
-}
-
-impl<C: Conversation> Pam<C> {
-    fn start(service_name: OsString, username: Option<OsString>, conversation: C) -> Result<Self> {
-        let mut conv = Box::new(OwnedConversation::new(conversation));
+impl Pam {
+    pub fn start(service_name: OsString, username: OsString, password: OsString) -> Result<Self> {
+        let mut conv = Box::new(PamOwnedConversation::new(PamConversation::new(
+            username.to_str().expect("couldn't convert to string"),
+            password.to_str().expect("couldn't convert to string"),
+        )));
         let service_cstr = CString::new(service_name.as_bytes()).expect("null is forbidden");
-        let username_cstr = crate::helper::option_cstr_os(username.as_deref());
-        let username_cstr = crate::helper::prompt_ptr(username_cstr.as_deref());
+        let username_cstr = crate::pam::helper::option_cstr_os(Some(username).as_deref());
+        let username_cstr = crate::pam::helper::prompt_ptr(username_cstr.as_deref());
 
         let mut handle: *mut pam::pam_handle = ptr::null_mut();
-        let conv_ptr: *mut OwnedConversation<_> = conv.as_mut() as _;
+        let conv_ptr: *mut PamOwnedConversation = conv.as_mut() as _;
 
         let result = unsafe {
             pam::pam_start(
@@ -84,7 +64,7 @@ impl<C: Conversation> Pam<C> {
     }
 }
 
-impl<C: Conversation> Drop for Pam<C> {
+impl Drop for Pam {
     fn drop(&mut self) {
         self.end(Ok(()))
     }
@@ -94,7 +74,7 @@ fn split<T>(result: &Result<T>) -> Result<()> {
     result.as_ref().map(drop).map_err(|&e| e)
 }
 
-impl<C: Conversation> Pam<C> {
+impl Pam {
     pub fn authenticate(&mut self, flags: AuthnFlags) -> Result<()> {
         let result = {
             let flags: RawFlags = flags.into();
@@ -156,24 +136,26 @@ impl<C: Conversation> Pam<C> {
 
     pub fn end_silent(&mut self, result: Result<()>) -> () {
         let result: c_int = ReturnCode::from(result).into();
-        let result = result | pam::PAM_DATA_SILENT;
+        let result = result | constants::PAM_DATA_SILENT;
         unsafe {
             pam::pam_end(self.handle, result);
         }
     }
 
     pub fn username(&mut self, prompt: Option<&OsStr>) -> Result<OsString> {
-        let prompt = crate::helper::option_cstr_os(prompt);
+        let prompt = crate::pam::helper::option_cstr_os(prompt);
         let mut output: *const c_char = ptr::null();
         let ret = unsafe {
             pam::pam_get_user(
                 self.handle,
                 &mut output,
-                crate::helper::prompt_ptr(prompt.as_deref()),
+                crate::pam::helper::prompt_ptr(prompt.as_deref()),
             )
         };
         ErrorCode::result_from(ret)?;
-        Ok(unsafe { crate::helper::copy_pam_string(output).ok_or(ErrorCode::ConversationError)? })
+        Ok(unsafe {
+            crate::pam::helper::copy_pam_string(output).ok_or(ErrorCode::ConversationError)?
+        })
     }
 
     pub fn environ(&self) -> PamEnv<'_> {

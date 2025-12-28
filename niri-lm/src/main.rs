@@ -1,21 +1,12 @@
-use authkit::{
-    AuthnFlags, BaseFlags, ConversationAdapter, CredAction, Demux, Pam, PamBuilder,
-    Result as PamResult,
-};
+use authkit::{AuthnFlags, BaseFlags, CredAction, Pam, Result as PamResult};
 
 use std::{
-    ffi::{CString, OsStr, OsString},
+    ffi::{CString, OsStr},
     io::Write,
 };
 
 use macros::*;
-
 mod macros;
-
-pub fn worker() {
-    logger!("worker");
-    nix::unistd::setsid().expect("Couldn't setsid");
-}
 
 pub fn greeter() {
     login!("greeter");
@@ -37,34 +28,8 @@ pub fn main() {
 
     logger!("main");
 
-    struct UsernamePassConvo {
-        username: String,
-        password: String,
-    }
-
-    impl ConversationAdapter for UsernamePassConvo {
-        fn prompt(&self, _: impl AsRef<OsStr>) -> PamResult<OsString> {
-            Ok(OsString::from(&self.username))
-        }
-
-        fn masked_prompt(&self, _: impl AsRef<OsStr>) -> PamResult<OsString> {
-            Ok(OsString::from(&self.password))
-        }
-
-        fn error_msg(&self, _: impl AsRef<OsStr>) {}
-
-        fn info_msg(&self, _: impl AsRef<OsStr>) {}
-    }
-
-    fn authenticate(username: &str, password: &str) -> PamResult<Pam<Demux<UsernamePassConvo>>> {
-        let user_pass = UsernamePassConvo {
-            username: username.into(),
-            password: password.into(),
-        };
-
-        let mut txn = PamBuilder::new("greetd-greeter")
-            .username(username)
-            .build(user_pass.into_conversation())?;
+    fn authenticate(service: &str, username: &str, password: &str) -> PamResult<Pam> {
+        let mut txn = Pam::start(service.into(), username.into(), password.into())?;
 
         txn.authenticate(AuthnFlags::empty())?;
         txn.account_management(AuthnFlags::empty())?;
@@ -72,14 +37,14 @@ pub fn main() {
         Ok(txn)
     }
 
-    if let Ok(mut txn) = authenticate("greeter", "") {
+    if let Ok(mut txn) = authenticate("greetd-greeter", "greeter", "") {
         log!("Logged IN {:?}", txn.username(None),);
 
         txn.items_mut()
-            .set_tty_name(Some(&OsStr::new("tty3")))
-            .expect("Coudln't set PAM to tty3");
+            .set_tty_name(Some(&OsStr::new("tty4")))
+            .expect("Coudln't set PAM to tty4");
 
-        txn.environ_mut().insert("XDG_VTNR", "3");
+        txn.environ_mut().insert("XDG_VTNR", "4");
         txn.environ_mut().insert("XDG_SEAT", "seat0");
         txn.environ_mut().insert("XDG_SESSION_CLASS", "greeter");
         txn.environ_mut().insert("USER", "greeter");
@@ -93,12 +58,13 @@ pub fn main() {
 
         txn.setcred(CredAction::Establish).expect("Can't set cred");
 
-        let terminal = CString::new("/dev/tty3").unwrap();
+        let terminal = CString::new("/dev/tty4").unwrap();
         log!("Opening terminal",);
         let fd = authkit::tty::open(&terminal).expect("Couldn't open terminal");
-        if authkit::tty::current(&fd) != 3 {
+        let current = authkit::tty::current(&fd);
+        if current != 4 {
             log!("Switching VT",);
-            authkit::tty::switch(&fd, 3);
+            authkit::tty::switch(&fd, 4);
         }
 
         log!("Taking terminal",);
@@ -124,6 +90,9 @@ pub fn main() {
         log!("Spawning greeter",);
         let child = fork!(&greeter, &[&greeter, &arg], &env);
         wait!(child);
+
+        authkit::tty::switch(&fd, current);
+        authkit::tty::close(fd);
     } else {
         std::process::exit(1)
     }

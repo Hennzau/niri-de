@@ -1,10 +1,9 @@
-use core::error::Error;
 use core::marker::{PhantomData, PhantomPinned};
 use core::mem::ManuallyDrop;
-use core::ops::{Deref, DerefMut};
+use core::ops::Deref;
 use core::ptr;
 use core::ptr::NonNull;
-use core::{any, fmt, mem, slice};
+use core::{any, mem, slice};
 
 use std::ffi::{CStr, CString, OsStr, OsString, c_char};
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
@@ -28,88 +27,6 @@ where
         slice::from_raw_parts(ptr_ptr.cast::<&T>(), count)
             .iter()
             .copied()
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct TooBigError {
-    pub(crate) size: usize,
-    pub(crate) max: usize,
-}
-
-impl Error for TooBigError {}
-
-impl fmt::Display for TooBigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "can't allocate a message of {size} bytes (max {max})",
-            size = self.size,
-            max = self.max
-        )
-    }
-}
-
-#[allow(clippy::wrong_self_convention)]
-pub(crate) trait Buffer {
-    fn allocate(len: usize) -> Self;
-
-    #[allow(clippy::missing_safety_doc)]
-    unsafe fn as_mut_slice(this: &mut Self, len: usize) -> &mut [u8];
-}
-
-impl Buffer for Vec<u8> {
-    fn allocate(bytes: usize) -> Self {
-        vec![0; bytes]
-    }
-
-    #[allow(clippy::missing_safety_doc)]
-    unsafe fn as_mut_slice(this: &mut Self, bytes: usize) -> &mut [u8] {
-        &mut this[..bytes]
-    }
-}
-
-pub(crate) struct BinaryPayload {
-    pub(crate) total_bytes_u32be: [u8; 4],
-    pub(crate) data_type: u8,
-    pub(crate) _marker: PhantomData<PhantomPinned>,
-}
-
-impl BinaryPayload {
-    pub(crate) const MAX_SIZE: usize = (u32::MAX - 5) as usize;
-
-    pub(crate) fn fill(buf: &mut [u8], data: &[u8], data_type: u8) {
-        let ptr: *mut Self = buf.as_mut_ptr().cast();
-
-        let me = unsafe { ptr.as_mut().unwrap_unchecked() };
-        me.total_bytes_u32be = u32::to_be_bytes(buf.len() as u32);
-        me.data_type = data_type;
-        buf[5..].copy_from_slice(data)
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct OwnedBinaryPayload<Owner: Buffer>(Owner);
-
-impl<O: Buffer> OwnedBinaryPayload<O> {
-    pub(crate) fn new(data: &[u8], type_: u8) -> Result<Self, TooBigError> {
-        let total_len: u32 = (data.len() + 5).try_into().map_err(|_| TooBigError {
-            size: data.len(),
-            max: BinaryPayload::MAX_SIZE,
-        })?;
-        let total_len = total_len as usize;
-        let mut buf = O::allocate(total_len);
-
-        BinaryPayload::fill(
-            unsafe { Buffer::as_mut_slice(&mut buf, total_len) },
-            data,
-            type_,
-        );
-        Ok(Self(buf))
-    }
-
-    pub(crate) fn into_inner(self) -> O {
-        self.0
     }
 }
 
@@ -161,18 +78,18 @@ macro_rules! num_enum {
 pub(crate) use num_enum;
 
 #[inline]
-pub fn calloc<T>(count: usize) -> NonNull<T> {
+pub(crate) fn calloc<T>(count: usize) -> NonNull<T> {
     unsafe { NonNull::new_unchecked(libc::calloc(count, mem::size_of::<T>()).cast()) }
 }
 
 #[inline]
-pub unsafe fn free<T>(p: *mut T) {
+pub(crate) unsafe fn free<T>(p: *mut T) {
     unsafe { libc::free(p.cast()) }
 }
 
 #[repr(C)]
 #[derive(Debug, Default)]
-pub struct Immovable(pub PhantomData<(*mut u8, PhantomPinned)>);
+pub(crate) struct Immovable(pub PhantomData<(*mut u8, PhantomPinned)>);
 
 pub fn option_cstr(prompt: Option<&[u8]>) -> Option<CString> {
     prompt.map(|p| CString::new(p).expect("nul is not allowed"))
@@ -191,7 +108,7 @@ pub fn prompt_ptr(prompt: Option<&CStr>) -> *const c_char {
 
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct CHeapBox<T>(NonNull<T>);
+pub(crate) struct CHeapBox<T>(NonNull<T>);
 
 #[allow(clippy::wrong_self_convention)]
 impl<T> CHeapBox<T> {
@@ -225,44 +142,9 @@ impl<T: Default> Default for CHeapBox<T> {
     }
 }
 
-impl crate::helper::Buffer for CHeapBox<u8> {
-    fn allocate(len: usize) -> Self {
-        unsafe { Self::from_ptr(calloc(len)) }
-    }
-
-    unsafe fn as_mut_slice(this: &mut Self, len: usize) -> &mut [u8] {
-        unsafe { slice::from_raw_parts_mut(this.0.as_ptr(), len) }
-    }
-}
-
-pub type CHeapPayload = crate::helper::OwnedBinaryPayload<CHeapBox<u8>>;
-
-impl<T> Deref for CHeapBox<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        unsafe { Self::as_ptr(self).as_ref() }
-    }
-}
-
-impl<T> DerefMut for CHeapBox<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { Self::as_ptr(self).as_mut() }
-    }
-}
-
-impl<T> Drop for CHeapBox<T> {
-    fn drop(&mut self) {
-        unsafe {
-            let ptr = self.0.as_ptr();
-            ptr::drop_in_place(ptr);
-            free(ptr)
-        }
-    }
-}
-
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct CHeapString(CHeapBox<c_char>);
+pub(crate) struct CHeapString(CHeapBox<c_char>);
 
 impl CHeapString {
     pub fn new(text: impl AsRef<[u8]>) -> Self {
