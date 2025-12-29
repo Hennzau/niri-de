@@ -12,6 +12,6 @@ version.workspace = true
 readme.workspace = true
 
 [dependencies]
-bitflags = "2.9.0"
-libc = { version = "0.2" }
-nix = { version = "0.30.1", features = ["fs", "ioctl", "process"] }
+bitflags.workspace = true
+libc.workspace = true
+nix.workspace = true

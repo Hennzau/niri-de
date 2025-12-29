@@ -1,21 +1,9 @@
 # `niri-de`
 
-# Installation
+# Installation on Fedora 43
 
-```bash
-cargo build --bins release
+## Packages needed
 
-sudo cp ./target/release/niri-login-root /usr/local/bin
-sudo cp ./target/release/niri-login /usr/local/bin
-sudo cp ./niri-login/niri-login.service /etc/systemd/system
-sudo systemctl enable niri-login
 ```
-
-# Uninstallation
-
-```bash
-sudo rm /usr/local/bin/niri-login-root
-sudo rm /usr/local/bin/niri-login
-sudo systemctl disable niri-login
-sudo rm /etc/systemd/system/niri-login.service
+sudo dnf install xwayland-satellite niri swaybg alacritty fuzzel
 ```
