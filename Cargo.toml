@@ -1,5 +1,5 @@
 [workspace]
-members = ["authkit", "logni", "rilm"]
+members = ["authkit"]
 resolver = "3"
 
 [workspace.package]
@@ -16,14 +16,29 @@ readme = "README.md"
 
 [workspace.dependencies]
 authkit = { version = "0.1.0", path = "authkit" }
-rilm = { version = "0.1.0", path = "rilm" }
 
 bitflags = "2.9.0"
 libc = { version = "0.2" }
 nix = { version = "0.30.1", features = ["fs", "ioctl", "process", "user"] }
-
 clap = { version = "4.5.53", features = ["derive"] }
-
 rpassword = "7.4"
-
 tempfile = "3.24.0"
+
+[package]
+name = "rilm"
+description = "Minimal Niri login manager."
+license = "MIT"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+readme.workspace = true
+
+[dependencies]
+authkit.workspace = true
+nix.workspace = true
+clap.workspace = true
+tempfile.workspace = true
