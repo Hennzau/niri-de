@@ -1,4 +1,4 @@
-pub const NIRI_LM_CONFIG: &'static str = r##"
+pub const NIRI_GREETER_CONFIG: &'static str = r##"
 spawn-at-startup "swaybg" "-i" "/usr/share/backgrounds/f43/default/f43-01-day.jxl";
 
 hotkey-overlay {
@@ -26,4 +26,92 @@ window-rule { geometry-corner-radius 10; clip-to-geometry true; min-width 300; m
 
 binds {
     Mod+Shift+E { quit; }
-}"##;
+}
+"##;
+
+pub const NIRI_SESSION_CONFIG: &'static str = r##"
+prefer-no-csd
+screenshot-path "/home/enzo/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+spawn-at-startup "swaybg" "-i" "/usr/share/backgrounds/f43/default/f43-01-day.jxl";
+
+input {
+    keyboard { xkb { layout "fr"; variant "mac"; }; }
+    touchpad { tap; natural-scroll; dwt; }
+}
+
+output "eDP-1" { mode "1920x1080@60.042"; }
+
+layout {
+    gaps 10
+    struts { left -6; right -6; top -6; bottom -6; }
+    center-focused-column "never"
+    focus-ring { width 4; active-gradient from="#efc05d" to="#161d43" angle=45 relative-to="workspace-view"; }
+    border { off; }
+    shadow { on; }
+    default-column-width { proportion 1.0; }
+}
+
+window-rule { geometry-corner-radius 10; clip-to-geometry true; min-width 300; min-height 300; }
+window-rule { match app-id=r#"firefox$"# title="^Picture-in-Picture$"; open-floating true; }
+window-rule { match app-id=r#"Alacritty$"#; default-column-width { proportion 0.5; }; }
+
+binds {
+    Mod+Shift+D { show-hotkey-overlay; }
+
+    Mod+Left  { focus-column-or-monitor-left; }
+    Mod+Down  { focus-window-or-workspace-down; }
+    Mod+Up    { focus-window-or-workspace-up; }
+    Mod+Right { focus-column-or-monitor-right; }
+
+    Mod+Shift+Down  { move-window-down-or-to-workspace-down; }
+    Mod+Shift+Up    { move-window-up-or-to-workspace-up; }
+    Mod+Shift+Left  { consume-or-expel-window-left; }
+    Mod+Shift+Right { consume-or-expel-window-right; }
+
+    Mod+ampersand { focus-workspace 1; }
+    Mod+eacute { focus-workspace 2; }
+    Mod+quotedbl { focus-workspace 3; }
+    Mod+apostrophe { focus-workspace 4; }
+    Mod+parenleft { focus-workspace 5; }
+    Mod+minus { focus-workspace 6; }
+    Mod+egrave { focus-workspace 7; }
+    Mod+underscore { focus-workspace 8; }
+    Mod+ccedilla { focus-workspace 9; }
+
+    Mod+Shift+ampersand { move-window-to-workspace 1; }
+    Mod+Shift+eacute { move-window-to-workspace 2; }
+    Mod+Shift+quotedbl { move-window-to-workspace 3; }
+    Mod+Shift+apostrophe { move-window-to-workspace 4; }
+    Mod+Shift+parenleft { move-window-to-workspace 5; }
+    Mod+Shift+minus { move-window-to-workspace 6; }
+    Mod+Shift+egrave { move-window-to-workspace 7; }
+    Mod+Shift+underscore { move-window-to-workspace 8; }
+    Mod+Shift+ccedilla { move-window-to-workspace 9; }
+
+    Alt+Ctrl+Left { set-window-width "-10%"; }
+    Alt+Ctrl+Right { set-window-width "+10%"; }
+    Alt+Ctrl+Up { set-window-height "-10%"; }
+    Alt+Ctrl+Down { set-window-height "+10%"; }
+
+    XF86AudioRaiseVolume    allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+"; }
+    XF86AudioLowerVolume    allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-"; }
+    XF86AudioMute           allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86MonBrightnessUp     allow-when-locked=true { spawn "brightnessctl" "s" "10%+"; }
+    XF86MonBrightnessDown   allow-when-locked=true { spawn "brightnessctl" "s" "10%-"; }
+
+    Mod+R { maximize-column; }
+    Mod+F { fullscreen-window; }
+
+    Mod+Shift+A { close-window; }
+    Mod+Return { spawn "alacritty"; }
+    Mod+D { spawn "fuzzel"; }
+    Mod+Shift+E { quit; }
+    Mod+Shift+P { power-off-monitors; }
+
+    Print { screenshot; }
+    Ctrl+Print { screenshot-screen; }
+    Alt+Print { screenshot-window; }
+}
+"##;

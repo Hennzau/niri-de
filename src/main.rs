@@ -81,7 +81,7 @@ fn validate_tty_number(s: &str) -> core::result::Result<u16, String> {
     Ok(num)
 }
 
-fn main() {
+fn cli() -> Result<()> {
     use steps::*;
 
     let cli = Cli::parse();
@@ -89,30 +89,24 @@ fn main() {
     match cli.command {
         Some(Command::Start(start_args)) => match start_args.target {
             StartTarget::Display { mode } => match mode {
-                DisplayMode::Tty { tty_number } => {
-                    start_display_tty(tty_number);
-                }
-                DisplayMode::Winit => {
-                    start_display_winit();
-                }
+                DisplayMode::Tty { tty_number } => start_display_tty(tty_number),
+                DisplayMode::Winit => start_display_winit(),
             },
-            StartTarget::Greeter { user } => {
-                start_greeter(user);
-            }
-            StartTarget::Session { user } => {
-                start_session(user);
-            }
+            StartTarget::Greeter { user } => start_greeter(user),
+            StartTarget::Session { user } => start_session(user),
         },
-        Some(Command::PatchConfig) => {
-            patch_config();
-        }
-        None => {
-            start_display_tty(1);
-        }
+        Some(Command::PatchConfig) => patch_config(),
+        None => start_display_tty(1),
     }
 }
 
-fn patch_config() {
+fn main() {
+    if let Err(e) = cli() {
+        eprintln!("{e}");
+    }
+}
+
+fn patch_config() -> Result<()> {
     println!("Patching RILM configuration (may require sudo)");
 
     todo!(

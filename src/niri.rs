@@ -1,13 +1,11 @@
 use std::{io::Write, os::unix::ffi::OsStrExt};
 use tempfile::NamedTempFile;
 
-use crate::config::NIRI_LM_CONFIG;
-
-pub const NIRI: &'static str = "/usr/bin/niri";
+use crate::error::{Error, Result};
 
 macro_rules! try_cstrings {
     ($($s:expr),* $(,)?) => {
-        (|| -> Result<_, std::ffi::NulError> {
+        (|| -> core::result::Result<_, std::ffi::NulError> {
             Ok(($(std::ffi::CString::new($s)?,)*))
         })()
     };
@@ -27,13 +25,14 @@ macro_rules! exec {
     };
 }
 
-pub fn launch_greeter() {
-    let mut tmp = NamedTempFile::new().expect("Couldn't create a temp file");
-    tmp.write_all(NIRI_LM_CONFIG.as_bytes())
-        .expect("Couldn't write config in temp file");
+pub fn launch(config: &str) -> Result<()> {
+    let mut tmp = NamedTempFile::new().map_err(Error::IoError)?;
+    tmp.write_all(config.as_bytes()).map_err(Error::IoError)?;
 
-    let (niri, c, config) = try_cstrings!(NIRI, "-c", tmp.path().as_os_str().as_bytes())
-        .expect("Couldn't parse command");
+    let (niri, c, config) = try_cstrings!("/usr/bin/niri", "-c", tmp.path().as_os_str().as_bytes())
+        .map_err(Error::NulError)?;
 
-    exec!(&niri, &[&niri, &c, &config])
+    exec!(&niri, &[&niri, &c, &config]);
+
+    Ok(())
 }
