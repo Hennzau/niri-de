@@ -10,7 +10,7 @@ fn authenticate(service: &str, username: &str, password: &str) -> PamResult<Pam>
 }
 
 fn main() {
-    if let Ok(mut txn) = authenticate("greetd-greeter", "greeter", "") {
+    if let Ok(mut txn) = authenticate("gdm-autologin", "greeter", "") {
         println!("Logged IN {:?}", txn.username(None));
 
         txn.open_session(BaseFlags::empty())
@@ -25,5 +25,7 @@ fn main() {
 
         txn.close_session(BaseFlags::empty())
             .expect("Couldn't close session");
+    } else {
+        eprintln!("Couldn't authenticate");
     }
 }

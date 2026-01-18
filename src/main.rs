@@ -47,6 +47,10 @@ enum StartTarget {
         /// Username for greeter (optional, defaults to current user)
         #[arg(long)]
         user: Option<String>,
+
+        /// If set, will launch a prompt asking for credentials
+        #[arg(long)]
+        prompt: bool,
     },
     /// Start session (will use current user if --user not specified)
     Session {
@@ -92,7 +96,13 @@ fn cli() -> Result<()> {
                 DisplayMode::Tty { tty_number } => start_display_tty(tty_number),
                 DisplayMode::Winit => start_display_winit(),
             },
-            StartTarget::Greeter { user } => start_greeter(user),
+            StartTarget::Greeter { user, prompt } => {
+                if prompt {
+                    start_greeter_prompt()
+                } else {
+                    start_greeter(user)
+                }
+            }
             StartTarget::Session { user } => start_session(user),
         },
         Some(Command::PatchConfig) => patch_config(),
